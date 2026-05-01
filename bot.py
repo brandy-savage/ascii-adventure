@@ -22,6 +22,7 @@ Session:       /session start campaign:dying_light session:1 characters:Grim,Nox
                /session next        — advance to next act with DM narration
                /session scene       — re-describe current scene
                /session challenge character:Grim — DM presents a tailored challenge
+               /session action character:Grim description:"I try to pick the lock" — character acts
                /session doom        — roll doom clock
                /session end         — close session with summary
 
@@ -760,11 +761,12 @@ class UpdateModal(discord.ui.Modal, title="Update Character"):
 
 @tree.command(name="session", description="Run a campaign session — start, advance acts, doom clock, end", guild=G)
 @app_commands.describe(
-    action="start · status · next · scene · challenge · doom · end",
+    action="start · status · next · scene · challenge · doom · end · action",
     session_num="Session number 1–5 (for 'start')",
     campaign="Campaign (for 'start', default: dying_light)",
     characters="Comma-separated character names (for 'start')",
-    character="Character name (for 'challenge')",
+    character="Character name (for 'challenge' or 'action')",
+    description="What your character does (for 'action')",
 )
 async def cmd_session(
     i: discord.Interaction,
@@ -773,6 +775,7 @@ async def cmd_session(
     campaign: str = "dying_light",
     characters: str = "",
     character: str = "",
+    description: str = "",
 ):
     _log_cmd(i, action=action, session_num=session_num, campaign=campaign)
     action = action.lower().strip()
@@ -994,8 +997,46 @@ async def cmd_session(
         log.info("SESSION ended session=%d user=%s", sess["session_num"], i.user.name)
         return
 
+    # ── action ─────────────────────────────────────────────────────────────
+    if action == "action":
+        if not character or not description:
+            await i.response.send_message(
+                "Usage: `/session action character:<name> description:<what you do>`",
+                ephemeral=True,
+            )
+            return
+        char = char_module.get_character(character)
+        if not char:
+            await i.response.send_message(f"Character `{character}` not found.", ephemeral=True)
+            return
+
+        await i.response.defer()
+
+        ab_str = " | ".join(
+            f"{ab} {v['mod']:+d}" for ab, v in char.get("abilities", {}).items()
+        )
+        hp = char.get("hp", {})
+        action_prompt = (
+            f"{char['name']} ({char['class']}) attempts: \"{description}\"\n"
+            f"Their stats: {ab_str} | HP {hp.get('current','?')}/{hp.get('max','?')}\n\n"
+            f"Narrate what happens in the context of the current scene. "
+            f"If this requires an ability check, name the ability and DR clearly "
+            f"(e.g. 'Roll AGI DR 12'). "
+            f"If it succeeds outright or fails outright based on context, say so. "
+            f"Make the outcome feel personal to {char['name']}'s class and abilities. "
+            f"Keep it under 1800 characters."
+        )
+        narration = await i.client.loop.run_in_executor(
+            None, call_dm_session, action_prompt, sess
+        )
+        await i.followup.send(
+            f"🎭 **{char['name']}** — *{description}*\n\n{narration}"
+        )
+        log.info("SESSION action char=%s desc=%s user=%s", character, description[:60], i.user.name)
+        return
+
     await i.response.send_message(
-        "Unknown action. Try: `start` · `status` · `next` · `scene` · `challenge` · `doom` · `end`",
+        "Unknown action. Try: `start` · `status` · `next` · `scene` · `challenge` · `action` · `doom` · `end`",
         ephemeral=True,
     )
 
