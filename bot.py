@@ -46,6 +46,7 @@ import discord
 from discord import app_commands
 
 sys.path.insert(0, str(Path(__file__).parent))
+import db
 import character as char_module
 import session as session_module
 
@@ -178,6 +179,9 @@ CURRENT ACT: {act_title}
 PARTY:
 {party_summary}
 
+RECENT SESSION EVENTS:
+{recent_memory}
+
 RULES REMINDERS:
 - d20 + ability modifier vs DR (default 12)
 - In darkness: PRE and AGI checks are DR+4
@@ -186,6 +190,7 @@ RULES REMINDERS:
 
 Speak in second-person. Grim, atmospheric, dark-comedic when appropriate.
 Keep responses under 1800 characters. No markdown headers. Use line breaks for pacing.
+Reference prior events from RECENT SESSION EVENTS to maintain story continuity.
 """
 
 ENCOUNTER_PROMPTS = [
@@ -228,6 +233,8 @@ def call_dm(prompt: str, campaign_name: str) -> str:
 def call_dm_session(prompt: str, sess: dict) -> str:
     act = session_module.get_current_act(sess)
     session_num = sess.get("session_num", 1)
+    session_id  = sess.get("id")
+    recent_mem  = db.memory_format(session_id) if session_id else "(no events yet)"
     system = SESSION_DM_SYSTEM.format(
         session_title=sess.get("session_title", "Unknown Session"),
         session_num=session_num,
@@ -235,8 +242,9 @@ def call_dm_session(prompt: str, sess: dict) -> str:
         doom_segments=sess.get("doom_segments", 0),
         doom_die=session_module.DOOM_DIE.get(session_num, 6),
         act_title=act["title"] if act else "—",
-        act_content=(act["content"][:1400] if act else "(no act loaded)"),
+        act_content=(act["content"][:1200] if act else "(no act loaded)"),
         party_summary=session_module.build_party_summary(sess.get("characters", [])),
+        recent_memory=recent_mem,
     )
     full = f"{system}\n\nPrompt: {prompt}\n\nDM:"
     try:
@@ -296,6 +304,8 @@ def _log_cmd(i: discord.Interaction, **kwargs):
 
 @client.event
 async def on_ready():
+    db.init_db()
+    log.info("Database initialised at %s", db.DB_FILE)
     log.info("Logged in as %s (id=%s)", client.user, client.user.id if client.user else "?")
     tree.copy_global_to(guild=G)
     await tree.sync(guild=G)
@@ -484,12 +494,19 @@ async def cmd_check(i: discord.Interaction, character_name: str, ability: str, d
     d20 = random.randint(1, 20)
     total = d20 + mod
     sign = "+" if mod >= 0 else ""
-    result = "✅ **SUCCESS**" if total >= dr else "❌ **FAILURE**"
+    success = total >= dr
+    result = "✅ **SUCCESS**" if success else "❌ **FAILURE**"
     crit = " *(natural 20!)*" if d20 == 20 else (" *(fumble!)*" if d20 == 1 else "")
     await i.response.send_message(
         f"🎲 **{character_name}** — {ability.upper()} check vs DR {dr}\n"
         f"d20({d20}) {sign}{mod} = **{total}** {result}{crit}"
     )
+    sess = session_module.get_session()
+    if sess and sess.get("id"):
+        outcome = "✅" if success else "❌"
+        db.memory_append(sess["id"], character_name, "roll",
+            f"{character_name} {ability.upper()} DR{dr} → {total} {outcome}{' (nat20)' if d20==20 else ' (fumble)' if d20==1 else ''}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -843,6 +860,12 @@ async def cmd_session(
         await i.followup.send(header + "\n".join(party_lines))
         await i.followup.send(doom_msg)
         await i.followup.send(f"📜 **OPENING:**\n{narration}")
+        sid = sess.get("id")
+        if sid:
+            db.memory_append(sid, "SYSTEM", "scene", f"Session {session_num} started: {sess['session_title']} — party: {', '.join(char_list)}")
+            if lost:
+                db.memory_append(sid, "SYSTEM", "doom", f"d{die_sides}→{die_result}: sun segment lost ({sess.get('doom_segments',0)}/6)")
+            db.memory_append(sid, "DM", "narration", narration[:400])
         log.info("SESSION started campaign=%s session=%d chars=%s user=%s",
                  campaign, session_num, char_list, i.user.name)
         return
@@ -894,9 +917,11 @@ async def cmd_session(
         narration = await i.client.loop.run_in_executor(
             None, call_dm_session, transition_prompt, sess
         )
-        await i.followup.send(
-            f"⚔️ **{act_label}**\n\n{narration}"
-        )
+        await i.followup.send(f"⚔️ **{act_label}**\n\n{narration}")
+        sid = sess.get("id")
+        if sid:
+            db.memory_append(sid, "SYSTEM", "scene", f"Advanced to {act_label}")
+            db.memory_append(sid, "DM", "narration", narration[:400])
         log.info("SESSION next act=%d user=%s", act_num, i.user.name)
         return
 
@@ -945,6 +970,9 @@ async def cmd_session(
             None, call_dm_session, challenge_prompt, sess
         )
         await i.followup.send(f"⚡ **Challenge — {char['name']}:**\n\n{narration}")
+        sid = sess.get("id")
+        if sid:
+            db.memory_append(sid, char["name"], "action", f"Challenge presented: {narration[:300]}")
         log.info("SESSION challenge char=%s user=%s", character, i.user.name)
         return
 
@@ -972,6 +1000,11 @@ async def cmd_session(
                 f"```{session_module.doom_bar(sess)}```"
             )
         await i.response.send_message(msg)
+        sid = sess.get("id")
+        if sid:
+            segs = sess.get("doom_segments", 0)
+            db.memory_append(sid, "SYSTEM", "doom",
+                f"d{die_sides}→{die_result}: {'segment lost' if lost else 'sun holds'} ({segs}/6)")
         log.info("SESSION doom roll=%d lost=%s user=%s", die_result, lost, i.user.name)
         return
 
@@ -988,11 +1021,16 @@ async def cmd_session(
         narration = await i.client.loop.run_in_executor(
             None, call_dm_session, close_prompt, sess
         )
-        ended = session_module.end_session()
+        sid = sess.get("id")
+        if sid:
+            db.memory_append(sid, "DM", "narration", narration[:400])
+            db.memory_append(sid, "SYSTEM", "scene",
+                f"Session {sess['session_num']} ended. Doom: {sess.get('doom_segments',0)}/6")
+        session_module.end_session(sess)
         await i.followup.send(
             f"🕯️ **SESSION {sess['session_num']} — {sess['session_title']} — CLOSED**\n\n"
             f"{narration}\n\n"
-            f"Doom Clock at close: `{session_module.doom_bar(ended or sess)}`"
+            f"Doom Clock at close: `{session_module.doom_bar(sess)}`"
         )
         log.info("SESSION ended session=%d user=%s", sess["session_num"], i.user.name)
         return
@@ -1032,6 +1070,10 @@ async def cmd_session(
         await i.followup.send(
             f"🎭 **{char['name']}** — *{description}*\n\n{narration}"
         )
+        sid = sess.get("id")
+        if sid:
+            db.memory_append(sid, char["name"], "action",
+                f"attempted: {description[:120]} → {narration[:200]}")
         log.info("SESSION action char=%s desc=%s user=%s", character, description[:60], i.user.name)
         return
 

@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
-import os
 import random
 from pathlib import Path
 
-CHAR_FILE = Path(__file__).parent / "data" / "characters.json"
+import db
 
 # ---------------------------------------------------------------------------
 # Systems and classes
@@ -115,47 +113,28 @@ def verify_password(password: str, char_name: str, stored_hash: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Storage
+# Storage — backed by SQLite via db module
 # ---------------------------------------------------------------------------
 
-def _load() -> dict:
-    if CHAR_FILE.exists():
-        try:
-            return json.loads(CHAR_FILE.read_text())
-        except Exception:
-            pass
-    return {}
-
-
-def _save(data: dict) -> None:
-    CHAR_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CHAR_FILE.write_text(json.dumps(data, indent=2))
-
-
 def get_character(name: str) -> dict | None:
-    return _load().get(name.lower())
+    return db.char_get(name)
 
 
 def list_characters() -> list[dict]:
-    return list(_load().values())
+    return db.char_list()
 
 
 def save_character(char: dict) -> None:
-    data = _load()
-    data[char["name"].lower()] = char
-    _save(data)
+    db.char_save(char)
 
 
 def delete_character(name: str, password: str) -> tuple[bool, str]:
-    data = _load()
-    key = name.lower()
-    char = data.get(key)
+    char = db.char_get(name)
     if not char:
         return False, f"No character named `{name}` found."
     if not verify_password(password, name, char["password_hash"]):
         return False, "Wrong password."
-    del data[key]
-    _save(data)
+    db.char_delete(name)
     return True, f"Character `{name}` deleted."
 
 

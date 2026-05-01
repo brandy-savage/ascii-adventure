@@ -1,40 +1,20 @@
 """Session management for ASCII Adventure — Dying Light campaign."""
 from __future__ import annotations
 
-import json
 import random
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 
 import character as char_module
+import db
 
-BASE_DIR   = Path(__file__).parent
-STATE_FILE = BASE_DIR / "data" / "state.json"
+BASE_DIR = Path(__file__).parent
 
 CAMPAIGN_CHAPTER_DIRS: dict[str, Path] = {
     "dying_light": Path("/opt/Dying-Light/chapters"),
 }
 MAX_SESSIONS: dict[str, int] = {"dying_light": 5}
 DOOM_DIE:    dict[int, int]  = {1: 6, 2: 6, 3: 4, 4: 4, 5: 2}
-
-
-# ---------------------------------------------------------------------------
-# State I/O — shares the same state.json as bot.py
-# ---------------------------------------------------------------------------
-
-def _load_state() -> dict:
-    if STATE_FILE.exists():
-        try:
-            return json.loads(STATE_FILE.read_text())
-        except Exception:
-            pass
-    return {}
-
-
-def _save_state(s: dict) -> None:
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(json.dumps(s, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -92,11 +72,11 @@ def parse_acts(plan_text: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Session state management
+# Session state management — backed by SQLite via db module
 # ---------------------------------------------------------------------------
 
 def get_session() -> dict | None:
-    return _load_state().get("active_session")
+    return db.session_get_active()
 
 
 def start_session(
@@ -106,73 +86,44 @@ def start_session(
     channel_id: int,
 ) -> tuple[dict, list[dict]]:
     """Start a new session. Returns (session_state, full_acts_list)."""
-    plan = load_session_plan(campaign, session_num) or ""
-    acts = parse_acts(plan)
+    plan  = load_session_plan(campaign, session_num) or ""
+    acts  = parse_acts(plan)
     title = get_session_title(plan) if plan else f"Session {session_num}"
-
-    # Truncate act content so state.json stays manageable
-    acts_stored = [
-        {"num": a["num"], "title": a["title"], "content": a["content"][:1800]}
-        for a in acts
-    ]
-
-    session: dict = {
-        "campaign": campaign,
-        "session_num": session_num,
-        "session_title": title,
-        "characters": characters,
-        "current_act": 0,
-        "acts": acts_stored,
-        "doom_segments": 0,
-        "doom_max": 6,
-        "channel_id": channel_id,
-        "started_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-    s = _load_state()
-    s["active_session"] = session
-    _save_state(s)
-    return session, acts
+    sess  = db.session_create(campaign, session_num, title, characters, acts, channel_id)
+    return sess, acts
 
 
 def advance_act(session: dict) -> tuple[dict, dict | None]:
     """Advance to next act. Returns (updated_session, new_act | None)."""
-    acts = session.get("acts", [])
+    acts    = session.get("acts", [])
     current = session.get("current_act", 0)
-    nums = sorted(a["num"] for a in acts if a["num"] != 99)
-    idx = nums.index(current) if current in nums else -1
+    nums    = sorted(a["num"] for a in acts if a["num"] != 99)
+    idx     = nums.index(current) if current in nums else -1
 
     new_act: dict | None = None
     if idx + 1 < len(nums):
-        next_num = nums[idx + 1]
+        next_num             = nums[idx + 1]
         session["current_act"] = next_num
-        new_act = next((a for a in acts if a["num"] == next_num), None)
+        new_act              = next((a for a in acts if a["num"] == next_num), None)
+        db.session_update(session)
 
-    s = _load_state()
-    s["active_session"] = session
-    _save_state(s)
     return session, new_act
 
 
-def end_session() -> dict | None:
-    s = _load_state()
-    ended = s.pop("active_session", None)
-    _save_state(s)
-    return ended
+def end_session(session: dict) -> None:
+    db.session_end(session["id"])
 
 
 def roll_doom(session: dict) -> tuple[bool, int, int]:
-    """Roll doom clock for current session. Returns (segment_lost, die_result, die_sides)."""
+    """Roll doom clock. Returns (segment_lost, die_result, die_sides)."""
     session_num = session.get("session_num", 1)
-    die = DOOM_DIE.get(session_num, 6)
+    die    = DOOM_DIE.get(session_num, 6)
     result = random.randint(1, die)
-    lost = result == 1
+    lost   = result == 1
 
     if lost:
         session["doom_segments"] = min(session.get("doom_segments", 0) + 1, 6)
-        s = _load_state()
-        s["active_session"] = session
-        _save_state(s)
+        db.session_update(session)
 
     return lost, result, die
 
