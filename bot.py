@@ -4,17 +4,26 @@ Art commands:  /wizard /dragon /goblin /orc /troll /undead /skull /castle /spell
                /class /summon /bestiary /reload
 
 DM commands:   /dm /encounter /npc /lore
+               (session-aware when a session is active)
 
 Campaign:      /campaign list|set|info
 
-Rules:         /rules
+Rules:         /rules morkborg|cyborg|dying_light
 
 Character:     /character new       — walkthrough (system → class → name+password)
-               /character sheet     — view your sheet (or any public character)
+               /character sheet     — view your sheet
                /character list      — all characters
                /character update    — edit notes/gear (password required)
                /character delete    — delete (password required)
                /character hp        — update HP (password required)
+
+Session:       /session start campaign:dying_light session:1 characters:Grim,Nox
+               /session status      — current act, party, doom clock
+               /session next        — advance to next act with DM narration
+               /session scene       — re-describe current scene
+               /session challenge character:Grim — DM presents a tailored challenge
+               /session doom        — roll doom clock
+               /session end         — close session with summary
 
 Dice:          /roll <expression>   — e.g. d20, 2d6+3, d8-1
                /check <ability>     — roll d20 + ability modifier
@@ -37,6 +46,7 @@ from discord import app_commands
 
 sys.path.insert(0, str(Path(__file__).parent))
 import character as char_module
+import session as session_module
 
 BASE_DIR   = Path(__file__).parent
 CAMPAIGNS  = BASE_DIR / "data" / "campaigns"
@@ -152,6 +162,31 @@ CAMPAIGN SETTING:
 {campaign}
 """
 
+SESSION_DM_SYSTEM = """\
+You are the Dungeon Master running {session_title} (Session {session_num}/5) \
+of DYING LIGHT // ENDLESS NIGHT on Discord.
+
+SETTING: Post-apocalyptic cyberpunk. Lux-9 is the last city. Outside: toxic air, \
+permanent night, things that hunt in darkness. Light is survival. The sun is dying.
+
+DOOM CLOCK: {doom_bar} — {doom_segments}/6 sun segments lost. Session die: d{doom_die}.
+
+CURRENT ACT: {act_title}
+{act_content}
+
+PARTY:
+{party_summary}
+
+RULES REMINDERS:
+- d20 + ability modifier vs DR (default 12)
+- In darkness: PRE and AGI checks are DR+4
+- Each round in total darkness: test PRE DR12 or lose action to panic
+- Torches attract sight-hunters. Battery lamps attract others. The artifact cannot be hidden.
+
+Speak in second-person. Grim, atmospheric, dark-comedic when appropriate.
+Keep responses under 1800 characters. No markdown headers. Use line breaks for pacing.
+"""
+
 ENCOUNTER_PROMPTS = [
     "The party suddenly faces an ambush. Describe it.",
     "The party rounds a corner and discovers something unexpected. What is it?",
@@ -169,9 +204,40 @@ NPC_PROMPTS = [
 
 
 def call_dm(prompt: str, campaign_name: str) -> str:
+    # If a session is active, use session-aware context
+    active = session_module.get_session()
+    if active:
+        return call_dm_session(prompt, active)
     campaign = load_campaign_text(campaign_name) or "Generic fantasy adventure."
     system = DM_SYSTEM.format(campaign=campaign[:3000])
     full = f"{system}\n\nPlayer: {prompt}\n\nDM:"
+    try:
+        r = subprocess.run(
+            [str(CLAUDE_BIN), "-p", full, "--model", "haiku", "--output-format", "text"],
+            capture_output=True, text=True, timeout=60,
+        )
+        out = r.stdout.strip()
+        return out[:1900] if out else "(The DM is silent...)"
+    except subprocess.TimeoutExpired:
+        return "(The DM is consulting ancient tomes... timed out)"
+    except Exception as e:
+        return f"(DM error: {e})"
+
+
+def call_dm_session(prompt: str, sess: dict) -> str:
+    act = session_module.get_current_act(sess)
+    session_num = sess.get("session_num", 1)
+    system = SESSION_DM_SYSTEM.format(
+        session_title=sess.get("session_title", "Unknown Session"),
+        session_num=session_num,
+        doom_bar=session_module.doom_bar(sess),
+        doom_segments=sess.get("doom_segments", 0),
+        doom_die=session_module.DOOM_DIE.get(session_num, 6),
+        act_title=act["title"] if act else "—",
+        act_content=(act["content"][:1400] if act else "(no act loaded)"),
+        party_summary=session_module.build_party_summary(sess.get("characters", [])),
+    )
+    full = f"{system}\n\nPrompt: {prompt}\n\nDM:"
     try:
         r = subprocess.run(
             [str(CLAUDE_BIN), "-p", full, "--model", "haiku", "--output-format", "text"],
@@ -686,6 +752,252 @@ class UpdateModal(discord.ui.Modal, title="Update Character"):
             f"✅ **{char['name']}** updated.\n\n{char_module.format_sheet(char)}",
             ephemeral=True,
         )
+
+
+# ---------------------------------------------------------------------------
+# Session commands
+# ---------------------------------------------------------------------------
+
+@tree.command(name="session", description="Run a campaign session — start, advance acts, doom clock, end", guild=G)
+@app_commands.describe(
+    action="start · status · next · scene · challenge · doom · end",
+    session_num="Session number 1–5 (for 'start')",
+    campaign="Campaign (for 'start', default: dying_light)",
+    characters="Comma-separated character names (for 'start')",
+    character="Character name (for 'challenge')",
+)
+async def cmd_session(
+    i: discord.Interaction,
+    action: str = "status",
+    session_num: int = 1,
+    campaign: str = "dying_light",
+    characters: str = "",
+    character: str = "",
+):
+    _log_cmd(i, action=action, session_num=session_num, campaign=campaign)
+    action = action.lower().strip()
+
+    # ── start ──────────────────────────────────────────────────────────────
+    if action == "start":
+        char_list = [c.strip() for c in characters.split(",") if c.strip()]
+        if not char_list:
+            await i.response.send_message(
+                "Usage: `/session start characters:Grim,Nox,Vex session:1`", ephemeral=True
+            )
+            return
+        max_s = session_module.MAX_SESSIONS.get(campaign, 5)
+        if not (1 <= session_num <= max_s):
+            await i.response.send_message(
+                f"Session number must be 1–{max_s} for `{campaign}`.", ephemeral=True
+            )
+            return
+
+        await i.response.defer()  # public
+
+        sess, acts = session_module.start_session(
+            campaign, session_num, char_list, i.channel_id
+        )
+
+        # Doom Clock roll
+        lost, die_result, die_sides = session_module.roll_doom(sess)
+        doom_msg = (
+            f"☀️ DOOM CLOCK — rolled d{die_sides}: **{die_result}**\n"
+            f"{'💀 A sun segment is lost. The sky dims.' if lost else 'The sun holds. For now.'}\n"
+            f"```{session_module.doom_bar(sess)}```"
+        )
+
+        # Opening narration via Claude
+        setup_act = next((a for a in acts if a["num"] == 0), None)
+        setup_ctx = setup_act["content"][:1200] if setup_act else ""
+        open_prompt = (
+            f"Open Session {session_num}: {sess['session_title']}. "
+            f"The party consists of: {', '.join(char_list)}. "
+            f"Set the scene using this setup context:\n{setup_ctx}\n"
+            f"Introduce the setting, the opening moment, and the hook. "
+            f"Address each character by name at least once."
+        )
+        narration = await i.client.loop.run_in_executor(
+            None, call_dm_session, open_prompt, sess
+        )
+
+        # Party summary
+        party_lines = ["**Party:**"]
+        for name in char_list:
+            char = char_module.get_character(name)
+            if char:
+                hp = char.get("hp", {})
+                party_lines.append(
+                    f"  🗡️ **{char['name']}** — {char['class']} "
+                    f"(HP {hp.get('current','?')}/{hp.get('max','?')})"
+                )
+            else:
+                party_lines.append(f"  ⚠️ **{name}** — character not found")
+
+        header = (
+            f"🕯️ **SESSION {session_num}: {sess['session_title'].upper()}**\n"
+            f"Campaign: {campaign} | Players: {', '.join(char_list)}\n"
+        )
+        await i.followup.send(header + "\n".join(party_lines))
+        await i.followup.send(doom_msg)
+        await i.followup.send(f"📜 **OPENING:**\n{narration}")
+        log.info("SESSION started campaign=%s session=%d chars=%s user=%s",
+                 campaign, session_num, char_list, i.user.name)
+        return
+
+    # ── require active session for remaining actions ────────────────────────
+    sess = session_module.get_session()
+    if not sess:
+        await i.response.send_message(
+            "No active session. Start one with `/session start`.", ephemeral=True
+        )
+        return
+
+    # ── status ─────────────────────────────────────────────────────────────
+    if action == "status":
+        act = session_module.get_current_act(sess)
+        act_label = f"ACT {act['num']}: {act['title']}" if act else "Unknown"
+        acts_list = [
+            f"{'→ ' if a['num'] == sess.get('current_act') else '  '}"
+            f"{'ACT ' + str(a['num']) + ': ' + a['title'] if a['num'] != 0 else 'SETUP'}"
+            for a in sess.get("acts", []) if a["num"] != 99
+        ]
+        lines = [
+            f"🕯️ **{sess['session_title']}** (Session {sess['session_num']}/5)",
+            f"Campaign: `{sess['campaign']}`",
+            f"Party: {', '.join(sess.get('characters', []))}",
+            f"Current: **{act_label}**",
+            f"```{chr(10).join(acts_list)}```",
+            f"Doom Clock: `{session_module.doom_bar(sess)}`",
+        ]
+        await i.response.send_message("\n".join(lines))
+        return
+
+    # ── next ───────────────────────────────────────────────────────────────
+    if action == "next":
+        sess, new_act = session_module.advance_act(sess)
+        if not new_act:
+            await i.response.send_message(
+                "No more acts. Use `/session end` to close out the session.", ephemeral=True
+            )
+            return
+
+        await i.response.defer()
+        act_num = new_act["num"]
+        act_label = f"ACT {act_num}: {new_act['title']}"
+        transition_prompt = (
+            f"Transition to {act_label}. Narrate the shift from the previous scene "
+            f"and introduce what lies ahead. Set the tone. Reference the characters by name."
+        )
+        narration = await i.client.loop.run_in_executor(
+            None, call_dm_session, transition_prompt, sess
+        )
+        await i.followup.send(
+            f"⚔️ **{act_label}**\n\n{narration}"
+        )
+        log.info("SESSION next act=%d user=%s", act_num, i.user.name)
+        return
+
+    # ── scene ──────────────────────────────────────────────────────────────
+    if action == "scene":
+        act = session_module.get_current_act(sess)
+        if not act:
+            await i.response.send_message("No active act.", ephemeral=True); return
+
+        await i.response.defer()
+        scene_prompt = (
+            f"Describe the current scene in vivid detail. "
+            f"What can the party see, hear, smell? What threats or opportunities are present? "
+            f"Hint at the challenges they'll face without spelling them out."
+        )
+        narration = await i.client.loop.run_in_executor(
+            None, call_dm_session, scene_prompt, sess
+        )
+        act_label = f"{'SETUP' if act['num'] == 0 else 'ACT ' + str(act['num']) + ': ' + act['title']}"
+        await i.followup.send(f"🗺️ **{act_label}**\n\n{narration}")
+        return
+
+    # ── challenge ──────────────────────────────────────────────────────────
+    if action == "challenge":
+        if not character:
+            await i.response.send_message(
+                "Usage: `/session challenge character:<name>`", ephemeral=True
+            )
+            return
+        char = char_module.get_character(character)
+        if not char:
+            await i.response.send_message(f"Character `{character}` not found.", ephemeral=True)
+            return
+
+        await i.response.defer()
+        ab_str = " | ".join(
+            f"{ab} {v['mod']:+d}" for ab, v in char.get("abilities", {}).items()
+        )
+        challenge_prompt = (
+            f"Present a specific challenge for {char['name']} ({char['class']}, {ab_str}). "
+            f"Draw from the current act's encounters or skill checks. "
+            f"State what {char['name']} faces, what ability is being tested, and the DR. "
+            f"Make it feel personal to their class and abilities."
+        )
+        narration = await i.client.loop.run_in_executor(
+            None, call_dm_session, challenge_prompt, sess
+        )
+        await i.followup.send(f"⚡ **Challenge — {char['name']}:**\n\n{narration}")
+        log.info("SESSION challenge char=%s user=%s", character, i.user.name)
+        return
+
+    # ── doom ───────────────────────────────────────────────────────────────
+    if action == "doom":
+        lost, die_result, die_sides = session_module.roll_doom(sess)
+        # Re-fetch session after roll (segments may have updated)
+        sess = session_module.get_session() or sess
+        if sess.get("doom_segments", 0) >= 6:
+            msg = (
+                f"☠️ DOOM CLOCK — d{die_sides} → **{die_result}**\n"
+                f"**THE SIXTH SEGMENT FALLS. THE SUN GOES OUT.**\n"
+                f"```{session_module.doom_bar(sess)}```\n"
+                f"The remaining time is the apocalypse. Burn the notes."
+            )
+        elif lost:
+            msg = (
+                f"☀️ DOOM CLOCK — d{die_sides} → **{die_result}** — 💀 **SEGMENT LOST**\n"
+                f"```{session_module.doom_bar(sess)}```\n"
+                f"The sky dims visibly. NPCs notice. No one says anything."
+            )
+        else:
+            msg = (
+                f"☀️ DOOM CLOCK — d{die_sides} → **{die_result}** — The sun holds.\n"
+                f"```{session_module.doom_bar(sess)}```"
+            )
+        await i.response.send_message(msg)
+        log.info("SESSION doom roll=%d lost=%s user=%s", die_result, lost, i.user.name)
+        return
+
+    # ── end ────────────────────────────────────────────────────────────────
+    if action == "end":
+        await i.response.defer()
+        segments = sess.get("doom_segments", 0)
+        close_prompt = (
+            f"Close Session {sess['session_num']}: {sess['session_title']}. "
+            f"Summarize what happened and what it means. "
+            f"The doom clock stands at {segments}/6 segments lost. "
+            f"End with a hook — something left unresolved, something the characters now carry."
+        )
+        narration = await i.client.loop.run_in_executor(
+            None, call_dm_session, close_prompt, sess
+        )
+        ended = session_module.end_session()
+        await i.followup.send(
+            f"🕯️ **SESSION {sess['session_num']} — {sess['session_title']} — CLOSED**\n\n"
+            f"{narration}\n\n"
+            f"Doom Clock at close: `{session_module.doom_bar(ended or sess)}`"
+        )
+        log.info("SESSION ended session=%d user=%s", sess["session_num"], i.user.name)
+        return
+
+    await i.response.send_message(
+        "Unknown action. Try: `start` · `status` · `next` · `scene` · `challenge` · `doom` · `end`",
+        ephemeral=True,
+    )
 
 
 # ---------------------------------------------------------------------------
