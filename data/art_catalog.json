@@ -1,0 +1,118 @@
+{
+  "wizard": [
+    {
+      "id": "elder_wizard",
+      "flavor": "An ancient mage materializes from the shadows...",
+      "art": "```\n        *.  . *\n       * . * . *\n      *  MAGIC  *\n         \\|/\n      ___[*]___\n     /  (o_o)  \\\n    |   /| |\\   |\n    |  (_| |_)  |\n     \\___|_|___/\n         | |\n        _| |_\n       /     \\\n      | ~   ~ |\n       \\_____/\n    ~~~~~~~~~~~~\n  ~ A  WIZARD ~\n    APPEARS! ~\n```"
+    },
+    {
+      "id": "dark_wizard",
+      "flavor": "The dark wizard raises his staff...",
+      "art": "```\n    /\\         /\\\n   /  \\  * * /  \\\n  / /\\ \\/   \\/ /\\ \\\n /_/  \\/  *  \\/ \\_\\\n       |     |\n     __|_____|__\n    /  (^___^)  \\\n   /  / (___) \\  \\\n  |  |  |   |  |  |\n  |  |  | * |  |  |\n   \\_\\__|___|__/_/\n       |   |\n     ~~|~~~|~~\n    ~~ |   | ~~\n      / \\ / \\\n     /   X   \\\n    *   / \\   *\n       *   *\n  \"I've been expecting you...\"\n```"
+    }
+  ],
+  "dragon": [
+    {
+      "id": "great_dragon",
+      "flavor": "The earth trembles as the dragon descends!",
+      "art": "```\n                                                     __\n                                                    ( /\n        __....----..__                            _/ /\n    ,-''               ``--.                   _/ /\n   /   __                  ``\\              __/ /\n  |  /    `-._                \\         _-'   /\n  | |        ``-.._            |      _-'    /\n  | |               `-.._      |   _-'      /\n   \\  \\-._               `'----|--'        /\n    `--._`-.._              ___|          /\n          `--.\\          _-' |  \\        /\n  __....----'' `        /    |   `------/\n /   ___________\\       |    |\n|  _/             \\     |    |    RAAAWR\n| /               |     |    |\n| |               |     |    |\n\\  \\__           _/      \\   |\n `.   `----...--'         \\  |\n   `-.._______            |  |\n              `--...------'  |\n                             '--'\n```"
+    },
+    {
+      "id": "fire_dragon",
+      "flavor": "FIRE!",
+      "art": "```\n    / \\__\n   (    @\\___         FIRE!\n   /         O      ~^~^~^~\n  /   (_____/      ~^~^~^~^~\n /_____/   U      ~^~^~^~^~^~\n```"
+    }
+  ],
+  "goblin": [
+    {
+      "id": "goblin_scout",
+      "flavor": "A goblin scout leaps from the bushes!",
+      "art": "```\n     ,      ,\n    /(.-\"\"-.)\\\n|  \\\\  (oo)  //  |\n|   \\\\/~~\\/\\/   |\n|    \\\\~~~~~/    |\n|     '----'     |\n    /|  ||  |\\\n   * | /||\\  | *\n     |/ || \\|\n      /  /\\  \\\n     /__/  \\__\\\n  SNEAK ATTACK!\n```"
+    },
+    {
+      "id": "goblin_king",
+      "flavor": "The Goblin King emerges from his throne!",
+      "art": "```\n        W\n       [*]\n      (>O<)\n     /|/ \\|\\\n    / |   | \\\n   *  |___|  *\n     /  |  \\\n    / __|__ \\\n   /__/   \\__\\\n  KNEEL BEFORE\n    THE KING!\n```"
+    }
+  ],
+  "orc": [
+    {
+      "id": "orc_warrior",
+      "flavor": "An orc warrior charges with a blood-curdling roar!",
+      "art": "```\n      _____\n     /     \\\n    | () () |\n    |   ^   |\n     \\_____/\n    /|AAAAA|\\\n   / |     | \\\n  /  |  *  |  \\\n |   | GRR |   |\n |   |_____|   |\n      |   |\n     /     \\\n    *       *\n  FOR THE HORDE\n```"
+    }
+  ],
+  "troll": [
+    {
+      "id": "cave_troll",
+      "flavor": "A cave troll smashes through the wall!",
+      "art": "```\n    .-.   .-.\n   /   \\ /   \\\n  | x   Y   x |\n  |     |     |\n   \\  --+--  /\n    `-------'\n   /|       |\\\n  / |       | \\\n /__|_______|__\\\n    |       |\n    |  o o  |\n    |_______|\n   YOU SMELL GOOD\n```"
+    }
+  ],
+  "undead": [
+    {
+      "id": "skeleton",
+      "flavor": "Bones rattle as a skeleton rises!",
+      "art": "```\n      ___\n     /   \\\n    | o o |\n    |  ^  |\n     \\ - /\n    __|_|__\n   /  | |  \\\n  *   | |   *\n      | |\n     / | \\\n    /  |  \\\n   *   |   *\n  CLATTER CLATTER\n```"
+    },
+    {
+      "id": "lich",
+      "flavor": "The ancient lich spreads its arms wide, dark energy crackling...",
+      "art": "```\n   * . * . * . *\n  .  D E A T H  .\n   * . * . * . *\n       _____\n      /     \\\n     | X   X |\n     |   -   |\n      \\__v__/\n    __|_____|__\n   /  |     |  \\\n  *   |     |   *\n  *   |_____|   *\n      |     |\n     /       \\\n    *         *\n  THE LICH AWAKENS\n```"
+    }
+  ],
+  "knight": [
+    {
+      "id": "paladin",
+      "flavor": "A holy paladin takes the field!",
+      "art": "```\n        ___\n       /   \\\n      |() ()|\n      |  ^  |\n       \\___/\n      /|   |\\\n     / | * | \\\n    /  |   |  \\\n   /  /|   |\\  \\\n  |  / |   | \\  |\n  | /  |___|  \\ |\n  |/   |   |   \\|\n      /|   |\\n     / |   | \\\n    /  |   |  \\\n   /  /     \\  \\\n  /__/         \\__\\\n  FOR  HONOR!\n```"
+    }
+  ],
+  "rogue": [
+    {
+      "id": "shadow_rogue",
+      "flavor": "You sense a presence... too late.",
+      "art": "```\n   . . . . . . .\n  .             .\n .   .-\"\"\"\"\"-.   .\n    /  -   -  \\\n    |  (o) (o) |\n    |    ---    |\n     \\  '---'  /\n      '--._.--'\n     ___|   |___\n    /   |   |   \\\n   / *  |   |  * \\\n  |     |   |     |\n   \\____|   |____/\n        |   |\n   ~SHADOWS MOVE~\n```"
+    }
+  ],
+  "mage": [
+    {
+      "id": "arcane_mage",
+      "flavor": "Arcane energy crackles around the mage's hands!",
+      "art": "```\n   * . * . * . *\n  . ARCANE SURGE .\n   * . * . * . *\n       _____\n      /     \\\n     | ~   ~ |\n     | (o_o) |\n      \\_____/\n     /|     |\\\n    / |  *  | \\\n   *  |     |  *\n   *  |_____|  *\n      |     |\n   ~~~~~~~~~~~\n   MANA: 9999\n```"
+    }
+  ],
+  "ranger": [
+    {
+      "id": "forest_ranger",
+      "flavor": "An arrow whistles past your ear from the treeline...",
+      "art": "```\n       |\n      >|>\n       |\n      _____\n     /     \\\n    | (o)(o) |\n    |   <   |\n     \\_____/\n    /|     |\\\n   / |     | \\\n  /  | /|\\ |  \\\n *   |/ | \\|   *\n     |  |  |\n    /   |   \\\n   *    |    *\n  EYES LIKE HAWKS\n```"
+    }
+  ],
+  "skull": [
+    {
+      "id": "death_skull",
+      "flavor": "Memento Mori.",
+      "art": "```\n    ___  ___\n   /   \\/   \\\n  |  O    O  |\n  |    /\\    |\n  |   (__) __|\n   \\  ----  /\n    |      |\n    | || | |\n    |_||_|_|\n   MEMENTO MORI\n```"
+    }
+  ],
+  "castle": [
+    {
+      "id": "keep",
+      "flavor": "The ancient keep rises against the stormy sky.",
+      "art": "```\n   |\\ /| |\\ /| |\\ /|\n   | V | | V | | V |\n   |   | |   | |   |\n   |   |_|   |_|   |\n   |               |\n   |   ___   ___   |\n   |  |   | |   |  |\n   |  | * | | * |  |\n   |  |   | |   |  |\n   |__|   |_|   |__|\n      |         |\n      |   ___   |\n      |  |   |  |\n      |  | * |  |\n      |  |   |  |\n      |__|   |__|\n         |   |\n      ~~~|~~~|~~~\n   THE KEEP STANDS\n```"
+    }
+  ],
+  "spell": [
+    {
+      "id": "expelliarmus",
+      "flavor": "EXPELLIARMUS!",
+      "art": "```\n  *    .  *    .      *\n    .    *    .    *\n  *  ~~~~~~~~~~~~~~~  *\n    ~ EXPELLIARMUS! ~\n  *  ~~~~~~~~~~~~~~~  *\n    .    *    .    *\n  *    .    *    .    *\n      \\o/\n       |   ZAP!\n      / \\\n  *        *      *\n     *   *    *\n        *\n```"
+    },
+    {
+      "id": "fireball",
+      "flavor": "FIREBALL LVL 9!",
+      "art": "```\n        . * . * . *\n      *   KABOOM!   *\n        * . * . * .\n           /|\\\n          / | \\\n    *----'  |  '----*\n           \\|/\n            *\n     ~~~~~~~~~~~~~~~~~\n     ~ FIREBALL LVL9 ~\n     ~~~~~~~~~~~~~~~~~\n  * .  *  . *  . * . *\n```"
+    }
+  ]
+}

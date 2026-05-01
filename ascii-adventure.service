@@ -1,0 +1,17 @@
+[Unit]
+Description=ASCII Adventure Discord slash command bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ascii_adventure
+EnvironmentFile=-%h/nanoclaw/.env
+ExecStart=/opt/ascii_adventure/.venv/bin/python bot.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
