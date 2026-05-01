@@ -2,6 +2,12 @@
 __pycache__/
 *.pyc
 data/characters.json
+data/characters.json.migrated
 data/state.json
+data/*.db
+data/*.db-shm
+data/*.db-wal
 logs/
 *.log
+.pytest_cache/
+__pycache__/
