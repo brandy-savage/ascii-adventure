@@ -114,5 +114,61 @@
       "flavor": "FIREBALL LVL 9!",
       "art": "```\n        . * . * . *\n      *   KABOOM!   *\n        * . * . * .\n           /|\\\n          / | \\\n    *----'  |  '----*\n           \\|/\n            *\n     ~~~~~~~~~~~~~~~~~\n     ~ FIREBALL LVL9 ~\n     ~~~~~~~~~~~~~~~~~\n  * .  *  . *  . * . *\n```"
     }
+  ],
+  "gloamer": [
+    {
+      "id": "gloamer",
+      "flavor": "It hovers at the edge of your torchlight, feeding on the glow. It doesn't attack. It waits. When your light goes out, it moves.",
+      "art": "```\n        . * .\n      *       *\n    .   _____   .\n   * __|     |__ *\n    / |  o o  | \\\n   |  |   ^   |  |\n   |   \\_____/   |\n    \\  /     \\  /\n  ~  \\/~~~~~~~\\/  ~\n  ~~ ~~~~~~~~~~~~ ~~\n    [FEEDS ON LIGHT]\n```"
+    }
+  ],
+  "pale_walker": [
+    {
+      "id": "pale_walker",
+      "flavor": "Once human. Long exposure to the Black Earth did something to the bones. They don't register pain anymore. They barely register you.",
+      "art": "```\n         O\n        /|\\\n     __/ | \\__\n    /    |    \\\n   /  ---+---  \\\n  |  /   |   \\  |\n  | /    |    \\ |\n   \\ \\   |   / /\n    \\_\\  |  /_/\n       \\ | /\n        \\|/\n    ~smog flows~\n  [PALE WALKER]\n```"
+    }
+  ],
+  "smog_wraith": [
+    {
+      "id": "smog_wraith",
+      "flavor": "The toxic atmosphere given form. No eyes. No hunger. Just motion through the dark, drawn toward heat and breath.",
+      "art": "```\n   ~  ~  ~  ~  ~  ~\n ~  ___________  ~\n  /  ~ ~ ~ ~ ~  \\\n | ~  (  . .  ) ~ |\n |  ~ \\  ___/ ~  |\n  \\ ~ ~/  \\~ ~ /\n   \\~ /~~~~\\ ~/\n    \\/~~~~~~\\/\n   ~~~~~~~~~~~\n  [SMOG WRAITH]\n    breathes you\n```"
+    }
+  ],
+  "gutter_rat": [
+    {
+      "id": "gutter_rat_grunt",
+      "flavor": "Wears a red neon band. Lowest rank in the Fused. He knows it. He resents it vocally. Will surrender at 2HP if offered a way out.",
+      "art": "```\n         o\n        /|\\\n       / | \\\n      /  |  \\\n     [neon band]\n      \\  |  /\n       \\_|_/\n        | |\n       _| |_\n      |     |\n  GUTTER RAT GRUNT\n  HP:6  ATK:d4+1\n```"
+    }
+  ],
+  "syndicate_enforcer": [
+    {
+      "id": "syndicate_enforcer",
+      "flavor": "Not Fused. Hired muscle for the Neon Gutter Syndicates. Professionals. They've seen worse than you. Morale 8.",
+      "art": "```\n        [###]\n       [#####]\n      [## O O ##]\n       [#  ___#]\n      /[#######]\\\n     / [  |||  ] \\\n    |  [  |||  ]  |\n    |__|_________|__|\n       ||       ||\n      [##]     [##]\n  SYNDICATE ENFORCER\n   HP:14  DR:Combat Knife d6+2\n```"
+    }
+  ],
+  "vex_ghost": [
+    {
+      "id": "vex_ghost",
+      "flavor": "Memory on loop in a dead city. Doesn't know it's dead. Repeats the same thirty seconds of its last day, forever, until you interrupt it.",
+      "art": "```\n      . . . . .\n    .           .\n   .  ( . . . )  .\n  .   .       .   .\n  .  .  ~   ~  .  .\n  .   .  ---  .   .\n   .    .   .    .\n    .           .\n      . . . . .\n    [VEX-GHOST]\n  still here / not here\n```"
+    }
+  ],
+  "church_inquisitor": [
+    {
+      "id": "church_inquisitor",
+      "flavor": "The Church of the Final Dawn sends inquisitors to snuff out light-hoarding. They carry extinguishers and writs of darkness. They are very devout.",
+      "art": "```\n        /\\\n       /  \\\n      / ++ \\\n     /______\\\n     |  __  |\n     | |XX| |\n     | |__| |\n     |______|\n     |  ||  |\n    /|__||__|\\\n   [INQUISITOR]\n  carries an extinguisher\n```"
+    }
+  ],
+  "the_hunger": [
+    {
+      "id": "the_hunger",
+      "flavor": "Final encounter. Vault of the Second Sun. It has been here as long as the artifact. It does not attack. It approaches. Every round it gets closer.",
+      "art": "```\n\n  * . * . * . * . *\n *                 *\n  *   .       .   *\n   *             *\n    * .       . *\n     *         *\n      *  . . *\n       *     *\n        *   *\n         * *\n          *\n\n    [THE HUNGER]\n  DR to notice it: 12\n  DR to not run: 16\n```"
+    }
   ]
 }

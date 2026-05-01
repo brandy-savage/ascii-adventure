@@ -40,14 +40,19 @@ SYSTEMS = {
     },
     "dying_light": {
         "label": "Dying Light",
-        "emoji": "🌆",
-        "abilities": ["STR", "AGI", "PRE", "TOU", "SYNTH"],
-        "currency": "credits",
-        "omens_label": "Glitch",
+        "emoji": "🕯️",
+        "abilities": ["STR", "AGI", "PRE", "TOU", "KNOWLEDGE"],
+        "currency": "chips",
+        "omens_label": "Omens",
         "classes": [
-            "Nano-Mystic", "Renegade", "Abandoned", "Dock Rat",
-            "Data Witch", "Chrome Avenger", "Flesh Merchant", "Punk",
-            "(Ask your DM for Dying Light-specific classes)",
+            # MörK Borg origins (wasteland-born, outside the city)
+            "Fanged Deserter", "Gutterborn Scum", "Esoteric Hermit",
+            "Wretched Royalty", "Heretical Priest", "Occult Herbmaster",
+            "Doomed", "Disinherited Noble", "Exiled Knight", "Pale One",
+            # CY_BORG origins (born in Lux-9's neon rot)
+            "Burned Hacker", "Discharged Corp Killer", "Forsaken Gang-Goon",
+            "Renegade Cyberslasher", "Orphaned Gearhead", "Broken Body",
+            "Shunned Nanomancer", "Waste Runner", "Punk Preacher", "Corporate Drone",
         ],
     },
 }
@@ -62,7 +67,8 @@ def roll(sides: int, count: int = 1) -> list[int]:
 
 
 def ability_modifier(total: int) -> int:
-    table = [(3, -3), (5, -2), (8, -1), (12, 0), (15, 1), (17, 2), (18, 3)]
+    # Standard MörK Borg / Dying Light table: 1-4=-3, 5-6=-2, 7-8=-1, 9-12=0, 13-14=+1, 15-16=+2, 17-18=+3
+    table = [(4, -3), (6, -2), (8, -1), (12, 0), (14, 1), (16, 2), (18, 3)]
     for threshold, mod in table:
         if total <= threshold:
             return mod
